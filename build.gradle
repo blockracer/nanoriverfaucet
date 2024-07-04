@@ -1,0 +1,169 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+    	id 'java'
+    	id "org.gradle.java"
+    	id "com.scuilion.syntastic" version "0.3.8"
+	id 'application'
+	id("com.github.johnrengelman.shadow") version "6.0.0"
+}
+
+apply plugin: 'war'
+apply plugin: "com.scuilion.syntastic"
+
+group 'faucet.projects'
+version '1'
+mainClassName = 'faucet.Main'
+
+repositories {
+    	mavenCentral()
+}
+tasks.jar {
+    manifest.attributes["Main-Class"] = "faucet.Main"
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'faucet.Main'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+ }
+
+
+dependencies {
+	// https://mvnrepository.com/artifact/com.sparkjava/spark-core Web framework
+	implementation group: 'com.sparkjava', name: 'spark-core', version: '2.9.1'
+	// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple logger
+	implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
+	// https://mvnrepository.com/artifact/log4j/log4j
+	implementation group: 'log4j', name: 'log4j', version: '1.2.17'
+	// https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+	// https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
+	implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'
+	// https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple
+	implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'	
+	//https://mvnrepository.com/artifact/com.google.code.gson/gson json transformer 
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
+	// https://mvnrepository.com/artifact/org.sql2o/sql2o
+	implementation group: 'org.sql2o', name: 'sql2o', version: '1.6.0'
+	// https://mvnrepository.com/artifact/mysql/mysql-connector-java
+	implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.30'
+	// https://mvnrepository.com/artifact/com.sun.mail/javax.mail
+	implementation group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+	// https://mvnrepository.com/artifact/org.glassfish/javax.json
+      	implementation group: 'org.glassfish', name: 'javax.json', version: '1.1.4'
+
+}
+//println configurations.runtime.resolve()
+
+//Get all Jars of packages in project
+task showJarLocations {
+    	doLast {
+        	configurations.compile.resolve().each { file -> println file.canonicalPath }
+    	}
+}
+
+test {
+	useJUnitPlatform();
+	testLogging.showStandardStreams = true;   
+	testLogging {
+		events "passed", "skipped", "failed"
+	}
+
+	
+}
+tasks.withType(JavaCompile) {
+    options.warnings = false
+}
+
+//compileJava.options.fork = true
+//compileJava.options.forkOptions.executable = "/usr/lib/jvm/java-8-openjdk-amd64/bin/javac"
+
+
+sourceSets {
+
+	test {
+		java.srcDirs = ['src/test/java']
+	}
+}
+
+sourceSets {
+    main {
+		java.srcDirs = ['src/main/resources/public', 'src/main/java']
+    }
+}
+
+
+
+tasks.withType(Test) {
+    testLogging {
+        // set options for log level LIFECYCLE
+        events TestLogEvent.FAILED,
+               TestLogEvent.PASSED,
+               TestLogEvent.SKIPPED,
+               TestLogEvent.STANDARD_OUT
+        exceptionFormat TestExceptionFormat.FULL
+        showExceptions true
+        showCauses true
+        showStackTraces true
+
+        // set options for log level DEBUG and INFO
+        debug {
+            events TestLogEvent.STARTED,
+                   TestLogEvent.FAILED,
+                   TestLogEvent.PASSED,
+                   TestLogEvent.SKIPPED,
+                   TestLogEvent.STANDARD_ERROR,
+                   TestLogEvent.STANDARD_OUT
+            exceptionFormat TestExceptionFormat.FULL
+        }
+        info.events = debug.events
+        info.exceptionFormat = debug.exceptionFormat
+
+        afterSuite { desc, result ->
+            if (!desc.parent) { // will match the outermost suite
+                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                def startItem = '|  ', endItem = '  |'
+                def repeatLength = startItem.length() + output.length() + endItem.length()
+                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+            }
+        }
+    }
+}
+
+tasks.register("j") {
+    doLast {
+        println System.getProperty("java.home")           
+    }
+}
+tasks.withType(JavaCompile) {
+	options.warnings = false
+	options.compilerArgs += '-Xlint:-deprecation'
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs = ['-Xms4000m', '-Xmx4000m']
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

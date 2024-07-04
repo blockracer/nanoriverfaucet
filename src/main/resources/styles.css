@@ -1,0 +1,66 @@
+ body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: black;
+        }
+	#header img {
+    		max-width: 100%; /* Make the logo responsive */
+    		height: auto; /* Maintain aspect ratio */
+	}
+
+        #header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #form-container {
+            text-align: center;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 400px; /* Adjust the maximum width as needed */
+        }
+
+        #dynamicForm label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        #dynamicForm input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        #responseContainer {
+	font-weight: bold;
+	font-size: 20px;
+	color: red;
+    	margin-top: 20px;
+    	white-space: pre-wrap;
+    	text-align: center; /* Center-align text */
+    	max-width: 100%; /* Set maximum width to prevent horizontal scrolling */
+    	overflow-x: hidden; 
+        }
+
+        button {
+            padding: 10px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
