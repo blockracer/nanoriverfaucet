@@ -75,6 +75,17 @@ public class Main {
                                 	ipReset.remove(ip);
                        		 }
 			}
+			for (Map.Entry<String, Long> entry : accountReset.entrySet()) {
+                        	String account = entry.getKey();
+                        	long nextResetTime = entry.getValue();
+                        	long currentTime = System.currentTimeMillis();
+
+                        	if(currentTime > nextResetTime) {
+                                	//remove from map
+                                	accountReset.remove(account);
+                       		 }
+			}
+
 			for (Map.Entry<String, Long> entry : fpReset.entrySet()) {
                         	String fp = entry.getKey();
                         	long nextResetTime = entry.getValue();
@@ -89,7 +100,7 @@ public class Main {
         	}, 0, 10, TimeUnit.SECONDS);
 
 		externalStaticFileLocation("/home/user/javaProjects/private_repo/faucet/src/main/resources");
-		port(4114);
+		port(1234);
 		//ipAddress("0.0.0.0");
 		//SparkUtils.createServerWithRequestLog(logger);
 
@@ -193,12 +204,14 @@ public class Main {
 								sendRequest(destination);
 								ipList.add(ip);
 								fingerprintList.add(fingerprint);
+								accountList.add(destination);
 								//BlockHash hash = new BlockHash(obj.getString("hash"));nano_1xno5fdkdrbxrwkdhmjp4ah9oxg49qkdy3d491ge3tywyqyt87ubwygq8m7k
 								long currentTime = System.currentTimeMillis();
 								long nextReset = currentTime + 600000;	
 
 								ipReset.put(ip, nextReset);
 								fpReset.put(fingerprint, nextReset);
+								accountReset.put(destination, nextReset);
 
 
 								res = "Nano has been sent.";
