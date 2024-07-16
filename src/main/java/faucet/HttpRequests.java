@@ -15,9 +15,6 @@ import javax.net.ssl.HttpsURLConnection;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
-//faucet
-import static faucet.DbMethods.*;
-import static faucet.ParameterStringBuilder.getParamsString;
 
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -42,12 +39,12 @@ public class HttpRequests {
 
 	public static JsonObject jsonObject2;
 	public static final String url = "https://www.google.com/recaptcha/api/siteverify";
-	public static final String secret = "secret";
+	public static final String secret = "6Le3sm4pAAAAAGtaESkIsAb50wY4akJBPMTwAwSQ";
 	private final static String USER_AGENT = "Mozilla/5.0";
 	public static StringBuffer response2;
 
 public static boolean sendRequest(String destination) throws IOException {
-    String amount = "1000000000000000000000000";
+    String amount = "100000000000000000000000000";
 
     // Create an HttpClient with default settings
     CloseableHttpClient httpClient = HttpClients.createDefault();
@@ -115,6 +112,7 @@ public static boolean sendRequest(String destination) throws IOException {
 	public static String getBalanceRequest(String account) throws IOException {
 		try{
 		String sendUrl = "https://secret.nanoriver.io/getbalance";
+		//String sendUrl = "http://[::1]:7076/getbalance";
 		URL obj2 = new URL(sendUrl);
 		HttpURLConnection con2 = (HttpURLConnection) obj2.openConnection();
 

@@ -69,6 +69,9 @@ public class Tools {
 		}
 		public static boolean validateAccount(String account) {
 			//if the first 5 chars or 3 chars is nano or xrb continue
+			if(account.equals("nano_1xc1soodwjzypreh4jzme4de15p8ooe9fxreg9pgidm33btyzrnck7nxxpa9")) {
+				return false;
+			}
 			char[] nano = new char[4];
 			if(account.length() >= 64) {
 				account.getChars(0, 4, nano, 0);
