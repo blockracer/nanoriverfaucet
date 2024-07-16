@@ -63,7 +63,6 @@ public class Main {
 
 		scheduler.scheduleAtFixedRate(() -> {
             		// Clear the list
-            		fingerprintList.clear();
             		System.out.println("List cleared at " + System.currentTimeMillis());
 
 			for (Map.Entry<String, Long> entry : ipReset.entrySet()) {
