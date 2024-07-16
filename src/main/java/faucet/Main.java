@@ -49,9 +49,13 @@ public class Main {
 	public static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	public static List<String> ipList = new ArrayList<>();
 
+	public static List<String> accountList = new ArrayList<>();
+
 	public static Map<String, Long> ipReset = new ConcurrentHashMap<>();
 
 	public static Map<String, Long> fpReset = new ConcurrentHashMap<>();
+
+	public static Map<String, Long> accountReset = new ConcurrentHashMap<>();
 
 	public static List<String> fingerprintList = new ArrayList<>();
 
@@ -85,7 +89,7 @@ public class Main {
 
         	}, 0, 10, TimeUnit.SECONDS);
 
-		externalStaticFileLocation("/home/mat/javaProjects/private_repo/faucet/src/main/resources");
+		externalStaticFileLocation("/home/user/javaProjects/private_repo/faucet/src/main/resources");
 		port(4114);
 		//ipAddress("0.0.0.0");
 		//SparkUtils.createServerWithRequestLog(logger);
@@ -133,6 +137,23 @@ public class Main {
 							String ip = request.headers("CF-Connecting-IP");
 							//find ip in array
 
+							for (Map.Entry<String, Long> entry : accountReset.entrySet()) {
+                        					String accountFound = entry.getKey();
+
+                        					long accountResetTime = entry.getValue();
+
+								long currentTime = System.currentTimeMillis();
+
+								long timeRemaining = accountResetTime - currentTime; 	
+								long toMinutes = timeRemaining / (60 * 1000);
+
+								if(accountFound.equals(destination)) {
+									System.out.println("destination found");
+                							return "Please wait " + toMinutes + " minutes.";
+									
+								}
+
+                       		 			}
 
 							for (Map.Entry<String, Long> entry : fpReset.entrySet()) {
                         					String fpfound = entry.getKey();
