@@ -1,4 +1,13 @@
 package faucet;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import com.google.gson.Gson;
+
 //spark
 import spark.staticfiles.*;
 import static spark.Spark.*;
@@ -7,12 +16,15 @@ import static spark.Spark.*;
 import org.apache.log4j.Logger;
 
 //java
+//
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.json.Json;
 import javax.json.JsonObject;
 import java.util.Map;
+
+import java.util.HashMap;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
@@ -49,6 +61,7 @@ public class Main {
 	public static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	public static List<String> ipList = new ArrayList<>();
 
+        public static String baselineHash; 
 	public static List<String> accountList = new ArrayList<>();
 
 	public static Map<String, Long> ipReset = new ConcurrentHashMap<>();
@@ -57,9 +70,40 @@ public class Main {
 
 	public static Map<String, Long> accountReset = new ConcurrentHashMap<>();
 
+	public static Map<String, Long> initialFpMap = new ConcurrentHashMap<>();
+
 	public static List<String> fingerprintList = new ArrayList<>();
 
-	public static void main (String[] args) {
+
+	private static String calculateHash(String filePath) throws IOException, NoSuchAlgorithmException {
+        // Read HTML content from file
+        String htmlContent = readHtmlFile(filePath);
+
+        // Calculate hash of the content
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        md.update(htmlContent.getBytes());
+        byte[] digest = md.digest();
+
+        // Convert byte array to hex string
+        StringBuilder sb = new StringBuilder();
+        for (byte b : digest) {
+            sb.append(String.format("%02x", b));
+        }
+
+        return sb.toString();
+    }
+
+    // Method to read HTML file content
+    private static String readHtmlFile(String filePath) throws IOException {
+        Path path = Paths.get(filePath);
+        byte[] htmlBytes = Files.readAllBytes(path);
+        return new String(htmlBytes);
+    }
+
+
+	public static void main (String[] args) throws IOException, NoSuchAlgorithmException {
+
+		baselineHash = calculateHash("/home/user/javaProjects/private_repo/faucet/src/main/resources/fs.html");
 
 		scheduler.scheduleAtFixedRate(() -> {
             		// Clear the list
@@ -96,11 +140,22 @@ public class Main {
                                 	fpReset.remove(fp);
                         	}
 			}
+			for (Map.Entry<String, Long> entry : initialFpMap.entrySet()) {
+                        	String intialFp = entry.getKey();
+				long removeTime = entry.getValue();
+                        	long currentTime = System.currentTimeMillis();
+
+                        	if(currentTime > removeTime) {
+                                	//remove from map
+                                	initialFpMap.remove(intialFp);
+                        	}
+			}
+
 
         	}, 0, 10, TimeUnit.SECONDS);
 
 		externalStaticFileLocation("/home/user/javaProjects/private_repo/faucet/src/main/resources");
-		port(1234);
+		port(4114);
 		//ipAddress("0.0.0.0");
 		//SparkUtils.createServerWithRequestLog(logger);
 
@@ -111,6 +166,35 @@ public class Main {
 			String result = ip2.substring(ip2.lastIndexOf(',') + 1).trim();
 			return result;
 		});
+		post("/initialfp", (request, response) -> {
+
+			response.type("application/json");
+
+            		JsonObject json = Json.createReader(new StringReader(request.body())).readObject();
+            		String initialFp = json.containsKey("initialFp") ? json.getString("initialFp") : null;
+			long currentTime = System.currentTimeMillis();
+			long removeTime = currentTime + 3600000;
+
+			Map<String, String> map = new HashMap<>();
+			//check if key exists
+			if(!initialFpMap.containsKey(initialFp)) {
+				//add entry
+				initialFpMap.put(initialFp, removeTime);
+
+				String result = "{\"result\":true}";
+				return result;
+
+			}
+
+			String result = "{\"result\":true}";
+			return result;
+
+
+		});
+
+	
+
+
 		post("/send", (request, response) -> {
 			response.type("text/plain");
 
@@ -120,11 +204,27 @@ public class Main {
 
             		// Retrieve values from JSON
             		String destination = json.containsKey("destination") ? json.getString("destination") : null;
+
+            		String clientHash = json.containsKey("hash") ? json.getString("hash") : null;
+
             		String fingerprint = json.containsKey("fingerprint") ? json.getString("fingerprint") : null;
             		String gRecaptchaResponse = json.containsKey("g-recaptcha-response") ? json.getString("g-recaptcha-response") : null;
 
 			System.out.println(gRecaptchaResponse);
 			System.out.println(destination);
+
+			System.out.println("client hash: " + clientHash );
+			System.out.println("server hash: " +  baselineHash);
+
+
+			//check if hashes match
+			if(!baselineHash.equals(clientHash)) { 
+				return "Page modification detected";
+			}
+			if(!initialFpMap.containsKey(fingerprint)){
+				return "fingerprint detection failed";
+			}
+
 
     			// Retrieve values from JSON
 
@@ -159,7 +259,7 @@ public class Main {
 
 								if(accountFound.equals(destination)) {
 									System.out.println("destination found");
-                							return "Please wait " + toMinutes + " minutes.";
+                							return "Please wait " + toMinutes + " minute(s).";
 									
 								}
 
@@ -177,7 +277,7 @@ public class Main {
 
 								if(ip.equals(fpfound)) {
 									System.out.println("fingerprint found");
-                							return "Please wait " + toMinutes + " minutes.";
+                							return "Please wait " + toMinutes + " minute(s).";
 									
 								}
 
@@ -194,7 +294,7 @@ public class Main {
 
 								if(ip.equals(ipfound)) {
 									System.out.println("ip found");
-                							return "Please wait " + toMinutues + " minutes.";
+                							return "Please wait " + toMinutues + " minute(s).";
 									
 								}
 
@@ -228,8 +328,11 @@ public class Main {
 			return res;	
 		});
 
+		
+
 
 	}
+ 	// Method to calculate hash of a file
 }
 
 

@@ -1,14 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0">
+    <meta name="description" content="Get free nano using the Nanoriver faucet.">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>Nano Faucet</title>
     <script src="https://www.google.com/recaptcha/api.js?render=6Le3sm4pAAAAAJIkQWdAX4cuPjDrfdk_1-lErb8X"></script>
     <link rel="stylesheet" href="styles.css">
     <script>
+        async function calculateSHA256() {
+            try {
+                const response = await fetch('fs.html'); // Adjust path as needed
+                const data = await response.text(); // Get the text content of the response
+
+                const buffer = new TextEncoder().encode(data);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                return hashHex; // Return the SHA-256 hash as a string
+            } catch (error) {
+                console.error('Error calculating hash:', error);
+                throw error; // Optional: rethrow the error or handle it appropriately
+            }
+        }
+
         function createForm() {
-            console.log('Creating form...');  // Debug message
+            console.log('Creating form...');
             const formContainer = document.getElementById('dynamicForm');
 
             // Create form element
@@ -32,66 +52,101 @@
             // Append the form to the container
             formContainer.appendChild(form);
         }
-	function submitForm() {
-		var responseContainer = document.getElementById('responseContainer');
-                responseContainer.innerHTML = "Processing...";  // Display the plain text response
-    		const destination = document.getElementById('destination').value;
 
-    grecaptcha.ready(function () {
-        // Request a reCAPTCHA token
-        grecaptcha.execute('6Le3sm4pAAAAAJIkQWdAX4cuPjDrfdk_1-lErb8X', { action: 'submit_form' }).then(
-            function (token) {
-                // Create a JSON object with form data
-                const formData = {
-                    destination: destination,
-                    'g-recaptcha-response': token
-                };
+        async function submitForm() {
+            const responseContainer = document.getElementById('responseContainer');
+            responseContainer.innerHTML = "Processing...";
 
-                // Send the JSON data to the server using fetch
-                fetch('/send', {
+            const destination = document.getElementById('destination').value;
+
+            try {
+                const hash = await calculateSHA256();
+                //console.log('SHA-256 Hash:', hash);
+
+                ThumbmarkJS.getFingerprint().then(function(fp) {
+                    const formData = {
+                        destination: destination,
+                        'g-recaptcha-response': null,
+                        fingerprint: fp,
+                        hash: hash
+                    };
+
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute('6Le3sm4pAAAAAJIkQWdAX4cuPjDrfdk_1-lErb8X', { action: 'submit_form' }).then(
+                            function (token) {
+                                formData['g-recaptcha-response'] = token;
+
+                                fetch('/send', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(formData),
+                                })
+                                .then(response => response.text())
+                                .then(data => {
+                                    responseContainer.innerHTML = data;
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    responseContainer.innerHTML = 'Error occurred while processing.';
+                                });
+                            },
+                            function (error) {
+                                console.error('reCAPTCHA execution error:', error);
+                                responseContainer.innerHTML = 'reCAPTCHA error occurred.';
+                            }
+                        );
+                    });
+                }).catch(function(error) {
+                    console.error('Error getting fingerprint:', error);
+                    responseContainer.innerHTML = 'Error occurred while fetching fingerprint.';
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                responseContainer.innerHTML = 'Error occurred while calculating hash.';
+            }
+        }
+
+        async function sendInitialFingerprint(fp) {
+            try {
+                const response = await fetch('/initialfp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData),
-                })
-                .then(response => response.text())  // Use response.text() to get the plain text response
-                .then(data => {
-                    // Update the content dynamically with the response
-                    //responseContainer = document.getElementById('responseContainer');
-                    responseContainer.innerHTML = data;  // Display the plain text response
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Handle error if necessary
+                    body: JSON.stringify({ initialFp: fp })
                 });
-            },
-            function (error) {
-                // Handle reCAPTCHA execution error
-                console.error('reCAPTCHA execution error:', error);
-                // You may want to inform the user or take alternative actions
+                const result = await response.json();
+                console.log('Initial fingerprint sent successfully:', result);
+            } catch (error) {
+                console.error('Error sending initial fingerprint:', error);
             }
-        );
-    });
-}
+        }
 
-
-        
-        // Create the form dynamically when the page loads
-        window.onload = function () {
-            console.log('Page loaded.');  // Debug message
+        window.onload = async function () {
+            console.log('Page loaded.');
             createForm();
+            
+            try {
+                ThumbmarkJS.getFingerprint().then(function(fp) {
+                    sendInitialFingerprint(fp);
+                }).catch(function(error) {
+                    console.error('Error getting fingerprint:', error);
+                });
+            } catch (error) {
+                console.error('Error sending initial fingerprint:', error);
+            }
         };
     </script>
 </head>
 <body>
-
     <div id="header">
         <img src="https://faucet.nanoriver.io/logo.png" alt="Nano Raffle Logo">
     </div>
-<a href="https://benture.io" target="_blank" style="text-decoration: none; background-color: #78A7EA; color: white; padding: 10px 20px; border-radius: 5px; display: inline-block;">Remote Jobs | Benture </a>
-<br>
-
+    <a href="https://benture.io" target="_blank" style="text-decoration: none; background-color: #78A7EA; color: white; padding: 10px 20px; border-radius: 5px; display: inline-block;">Remote Jobs | Benture </a>
+    <br>
     <div id="form-container">
         <h1>Get Free Nano!</h1>
         <div id="dynamicForm"></div>
@@ -100,11 +155,10 @@
 
     <div id="responseContainer"></div>
 
-      <a href="https://rpc.nano.to/" target="_blank" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 5px; display: inline-block;"> Sponsored by RPC.Nano.To</a>
-      <br>
-	<br>
-
+    <a href="https://rpc.nano.to/" target="_blank" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 5px; display: inline-block;"> Sponsored by RPC.Nano.To</a>
+    <br>
+    <br>
+    <footer style="color: white;">Made with <span style="color: red;">❤</span> by <a href="https://github.com/blockracer" style="color: white;">@blockracer</a></footer>
 </body>
-<footer style="color: white;">Made with <span style="color: red;">❤</span> by <a href="https://github.com/blockracer" style="color: white;">@blockracer</a></footer>
 </html>
 
