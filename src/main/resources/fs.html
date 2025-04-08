@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML File Hash</title>
+</head>
+<body>
+    <h1>Calculate HTML File Hash</h1>
+
+    <script>
+        async function calculateFileHash() {
+            try {
+                // Fetch the current HTML content
+                const response = await fetch('fs.html'); // Adjust path as needed
+                const htmlContent = await response.text();
+
+                // Calculate SHA-256 hash of the HTML content
+                const hash = await calculateSHA256(htmlContent);
+
+                // Log the hash for debugging
+                console.log('Client-side hash:', hash);
+
+                alert('Error calculating hash. Please try again.');
+            }
+        }
+
+        async function calculateSHA256(data) {
+            const buffer = new TextEncoder().encode(data);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // Automatically calculate hash when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            calculateFileHash();
+        });
+    </script>
+</body>
+</html>
+

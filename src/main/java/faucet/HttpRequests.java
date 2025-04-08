@@ -39,18 +39,18 @@ public class HttpRequests {
 
 	public static JsonObject jsonObject2;
 	public static final String url = "https://www.google.com/recaptcha/api/siteverify";
-	public static final String secret = "6Le3sm4pAAAAAGtaESkIsAb50wY4akJBPMTwAwSQ";
+	public static final String secret = "sercet";
 	private final static String USER_AGENT = "Mozilla/5.0";
 	public static StringBuffer response2;
 
 public static boolean sendRequest(String destination) throws IOException {
-    String amount = "100000000000000000000000000";
+    String amount = "10000000000000000000000000";
 
     // Create an HttpClient with default settings
     CloseableHttpClient httpClient = HttpClients.createDefault();
 
     // Define the URL you want to send the POST request to
-    String sendUrl = "https://secret.nanoriver.io/faucetsend";
+    String sendUrl = "https://secret.nanoriver.io/send";
 
     //String sendUrl = "http://[::1]:7076/faucetsend";
 
@@ -60,6 +60,7 @@ public static boolean sendRequest(String destination) throws IOException {
     // Add headers to the request
     httpPost.addHeader("User-Agent", USER_AGENT);
     httpPost.addHeader("Accept-Language", "en-US,en;q=0.5");
+    httpPost.addHeader("auth", "secret");
 
     // Create JSON object for the POST request
     JsonObject jsonRequest = Json.createObjectBuilder()
@@ -120,6 +121,7 @@ public static boolean sendRequest(String destination) throws IOException {
 		con2.setRequestMethod("GET");
 		con2.setRequestProperty("User-Agent", USER_AGENT);
 		con2.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
+		con2.setRequestProperty("auth", "secret");
 
 		// Send post request
 		con2.setDoOutput(true);

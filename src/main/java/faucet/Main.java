@@ -11,6 +11,7 @@ import com.google.gson.Gson;
 //spark
 import spark.staticfiles.*;
 import static spark.Spark.*;
+import spark.Session;
 
 //apache log4j
 import org.apache.log4j.Logger;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.nio.charset.Charset;
@@ -63,6 +65,11 @@ public class Main {
 
         public static String baselineHash; 
 	public static List<String> accountList = new ArrayList<>();
+
+	//public static List<String> initialSessionList = new ArrayList<>();
+	//public static List<String> initialSyncedSessionList = Collections.synchronizedList(initialSessionList);
+	
+	public static List<String> sessionList = new ArrayList<>();
 
 	public static Map<String, Long> ipReset = new ConcurrentHashMap<>();
 
@@ -103,7 +110,8 @@ public class Main {
 
 	public static void main (String[] args) throws IOException, NoSuchAlgorithmException {
 
-		baselineHash = calculateHash("/home/user/javaProjects/private_repo/faucet/src/main/resources/fs.html");
+
+		baselineHash = calculateHash("/path/to/secret.html");
 
 		scheduler.scheduleAtFixedRate(() -> {
             		// Clear the list
@@ -154,7 +162,7 @@ public class Main {
 
         	}, 0, 10, TimeUnit.SECONDS);
 
-		externalStaticFileLocation("/home/user/javaProjects/private_repo/faucet/src/main/resources");
+		externalStaticFileLocation("/path/to/resources");
 		port(4114);
 		//ipAddress("0.0.0.0");
 		//SparkUtils.createServerWithRequestLog(logger);
@@ -169,7 +177,7 @@ public class Main {
 		post("/initialfp", (request, response) -> {
 
 			response.type("application/json");
-
+			Session userSession = request.session(true);
             		JsonObject json = Json.createReader(new StringReader(request.body())).readObject();
             		String initialFp = json.containsKey("initialFp") ? json.getString("initialFp") : null;
 			long currentTime = System.currentTimeMillis();
@@ -198,6 +206,19 @@ public class Main {
 		post("/send", (request, response) -> {
 			response.type("text/plain");
 
+				Thread.sleep(500);
+
+				Session session = request.session(true);
+            			String userId = session.id();
+
+				 for (String id : sessionList) {
+					 if(userId.equals(id)) {
+						return "rate limit exceeded, wait 10 seconds";
+					}
+        			}
+				sessionList.add(userId);
+
+
 			System.out.println("Received JSON data: " + request.body());
 			// Parse JSON data from the request body using javax.json.JsonObject
             		JsonObject json = Json.createReader(new StringReader(request.body())).readObject();
@@ -219,9 +240,13 @@ public class Main {
 
 			//check if hashes match
 			if(!baselineHash.equals(clientHash)) { 
+
+				scheduleRemoval(userId);
 				return "Page modification detected";
+
 			}
 			if(!initialFpMap.containsKey(fingerprint)){
+				scheduleRemoval(userId);
 				return "fingerprint detection failed";
 			}
 
@@ -258,6 +283,7 @@ public class Main {
 								long toMinutes = timeRemaining / (60 * 1000);
 
 								if(accountFound.equals(destination)) {
+									scheduleRemoval(userId);
 									System.out.println("destination found");
                 							return "Please wait " + toMinutes + " minute(s).";
 									
@@ -276,6 +302,7 @@ public class Main {
 								long toMinutes = timeRemaining / (60 * 1000);
 
 								if(ip.equals(fpfound)) {
+									scheduleRemoval(userId);
 									System.out.println("fingerprint found");
                 							return "Please wait " + toMinutes + " minute(s).";
 									
@@ -293,6 +320,7 @@ public class Main {
 								long toMinutues = timeRemaining / (60 * 1000);
 
 								if(ip.equals(ipfound)) {
+									scheduleRemoval(userId);
 									System.out.println("ip found");
                 							return "Please wait " + toMinutues + " minute(s).";
 									
@@ -307,23 +335,30 @@ public class Main {
 								accountList.add(destination);
 								//BlockHash hash = new BlockHash(obj.getString("hash"));nano_1xno5fdkdrbxrwkdhmjp4ah9oxg49qkdy3d491ge3tywyqyt87ubwygq8m7k
 								long currentTime = System.currentTimeMillis();
-								long nextReset = currentTime + 600000;	
+								long nextReset = currentTime + 1200000;	
 
 								ipReset.put(ip, nextReset);
 								fpReset.put(fingerprint, nextReset);
 								accountReset.put(destination, nextReset);
 
 
+								scheduleRemoval(userId);
 								res = "Nano has been sent.";
 								return res;
 					}
+					scheduleRemoval(userId);
 					res = "Faucet is dry!";
 					return res;
 				}
+
+
+				scheduleRemoval(userId);
 				res = "Not a nano address!";
 				return res;
 
 			}
+			//sessionList.remove(userId);
+			scheduleRemoval(userId);
 			res = "Captcha verification failed!";
 			return res;	
 		});
@@ -333,6 +368,22 @@ public class Main {
 
 	}
  	// Method to calculate hash of a file
+	// Helper method to check if a user can submit based on rate limit
+
+	 private static void scheduleRemoval(String userId) {
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
+        // Schedule the removal after 10 seconds
+        executorService.schedule(() -> {
+            if (sessionList.contains(userId)) {
+                sessionList.remove(userId);
+                System.out.println("Item '" + userId + "' removed after 10 seconds.");
+            } else {
+                System.out.println("Item '" + userId + "' not found in the list.");
+            }
+            executorService.shutdown();
+        }, 10, TimeUnit.SECONDS);
+	}
 }
 
 
